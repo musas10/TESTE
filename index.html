@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS - Central de Operações</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>[ Central de Operações ]</h1>
+        <div class="controles-topo">
+            <button class="btn-secundario" onclick="Modais.abrirHistorico()">📜 Histórico</button>
+            <button class="btn-secundario" onclick="Exportacao.exportarExcel()">📊 Exportar XLSX</button>
+            <button class="btn-secundario" onclick="Modais.abrirGerenciador('oferta', 'Ofertas')">⚙️ Ofertas</button>
+            <button class="btn-secundario" onclick="Modais.abrirGerenciador('bm', 'BMs')">⚙️ BMs</button>
+            <button class="btn-secundario" onclick="Modais.abrirGerenciador('pagina', 'Páginas')">⚙️ Páginas</button>
+            <button class="btn-principal" onclick="Modais.abrirModalAtivo()">📱 Novo Aparelho</button>
+        </div>
+    </header>
+
+    <div class="dashboard" id="painel-dashboard">
+        <div class="dash-card"><div class="dash-titulo">Total de Aparelhos</div><div class="dash-valor" id="dash-total">0</div></div>
+        <div class="dash-card"><div class="dash-titulo">Operando</div><div class="dash-valor text-operando" id="dash-operando">0</div></div>
+        <div class="dash-card"><div class="dash-titulo">Em Aquecimento</div><div class="dash-valor text-aquecendo" id="dash-aquecendo">0</div></div>
+        <div class="dash-card"><div class="dash-titulo">Banidos</div><div class="dash-valor text-banida" id="dash-banida">0</div></div>
+    </div>
+
+    <div class="painel-filtros">
+        <div class="busca-container">
+            <input type="text" id="campo-busca" placeholder="Buscar por ID, número, tags...">
+        </div>
+        <select id="filtro-pais"><option value="">Todos os Países</option></select>
+        <select id="filtro-bm"><option value="">Todas as BMs</option></select>
+        <select id="filtro-status">
+            <option value="">Todos os Status</option>
+            <option value="operando">Operando</option>
+            <option value="aquecendo">Aquecendo</option>
+            <option value="banida">Banida</option>
+            <option value="em-analise">Em análise</option>
+            <option value="backup">Backup</option>
+            <option value="descartada">Descartada</option>
+        </select>
+        <select id="ordem-dados">
+            <option value="id-asc">Ordenar por: ID (Crescente)</option>
+            <option value="id-desc">Ordenar por: ID (Decrescente)</option>
+            <option value="status">Ordenar por: Status</option>
+            <option value="pais">Ordenar por: País</option>
+        </select>
+    </div>
+
+    <div class="barra-views">
+        <button class="btn-view ativo" onclick="Render.mudarView('cards')" id="btn-view-cards">🗂️ Cards</button>
+        <button class="btn-view" onclick="Render.mudarView('lista')" id="btn-view-lista">📄 Lista</button>
+        <button class="btn-view" onclick="Render.mudarView('agrupada-pais')" id="btn-view-agrupada-pais">🌍 Por País</button>
+        <button class="btn-view" onclick="Render.mudarView('agrupada-bm')" id="btn-view-agrupada-bm">🏢 Por BM</button>
+    </div>
+
+    <div id="painel-principal"></div>
+
+    <div class="modal-overlay" id="modal-gerenciador">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="titulo-gerenciador">Gerenciar</h3>
+                <button class="btn-fechar" onclick="Modais.fechar('modal-gerenciador')">&times;</button>
+            </div>
+            <form id="form-gerenciador" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="campo-novo-item" placeholder="Nome do novo item..." required style="flex: 1;">
+                <button type="submit" class="btn-secundario">Adicionar</button>
+            </form>
+            <hr style="border: 0; border-top: 1px solid #1e293b;">
+            <div class="lista-gerenciador" id="container-lista-gerenciador"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-historico">
+        <div class="modal-container" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>📜 Histórico de Ações</h3>
+                <button class="btn-fechar" onclick="Modais.fechar('modal-historico')">&times;</button>
+            </div>
+            <div id="lista-logs" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-detalhes">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>Detalhes do Ativo</h3>
+                <button class="btn-fechar" onclick="Modais.fechar('modal-detalhes')">&times;</button>
+            </div>
+            <div id="conteudo-detalhes" style="color: #e2e8f0; line-height: 1.8;"></div>
+            <div class="modal-footer">
+                <button class="btn-acao" id="btn-editar-detalhe">✏️ Editar Este Aparelho</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-ativo">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="titulo-modal-ativo">Vincular Aparelho</h3>
+                <button class="btn-fechar" onclick="Modais.fechar('modal-ativo')">&times;</button>
+            </div>
+            <form id="form-cadastro">
+                <div class="grupo-form"><label>ID do Aparelho *</label><input type="text" id="campo-id" required></div>
+                <div class="grupo-form"><label>País de Operação *</label>
+                    <select id="campo-pais" required>
+                        <option value="🇧🇷 Brasil">🇧🇷 Brasil</option><option value="🇵🇪 Peru">🇵🇪 Peru</option>
+                        <option value="🇨🇴 Colômbia">🇨🇴 Colômbia</option><option value="🇪🇨 Equador">🇪🇨 Equador</option>
+                        <option value="🇻🇪 Venezuela">🇻🇪 Venezuela</option>
+                    </select>
+                </div>
+                <div class="grupo-form"><label>Número do WhatsApp *</label><input type="text" id="campo-numero" required></div>
+                <div class="grupo-form"><label>BM (Business Manager) *</label><select id="campo-bm" required></select></div>
+                <div class="grupo-form"><label>Página do Meta Ads *</label><select id="campo-pagina" required></select></div>
+                <div class="grupo-form"><label>Oferta Ativa *</label><select id="campo-oferta" required></select></div>
+                <div class="grupo-form"><label>Status Inicial *</label>
+                    <select id="campo-status">
+                        <option value="operando">Operando</option><option value="aquecendo">Em Aquecimento</option>
+                        <option value="banida">Banida</option><option value="em-analise">Em Análise</option>
+                        <option value="backup">Backup</option><option value="descartada">Descartada</option>
+                    </select>
+                </div>
+                <div class="grupo-form"><label>Tags (separadas por vírgula)</label><input type="text" id="campo-tags" placeholder="Ex: Escala, Crítico, Novo"></div>
+                <div class="grupo-form"><label>Observações</label><textarea id="campo-obs" rows="3" style="width:100%; background:#1e293b; color:#fff; border:1px solid #334155; border-radius:8px; padding:10px;"></textarea></div>
+                
+                <div class="modal-footer">
+                    <button type="button" style="background: transparent; border-color: #334155;" onclick="Modais.fechar('modal-ativo')">Cancelar</button>
+                    <button type="submit" class="btn-principal">Salvar Aparelho</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/storage.js"></script>
+    <script src="js/historico.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/aparelhos.js"></script>
+    <script src="js/modais.js"></script>
+    <script src="js/filtros.js"></script>
+    <script src="js/exportacao.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
