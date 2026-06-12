@@ -1,35 +1,51 @@
+// Conexão Oficial Supabase
+const supabaseUrl = 'https://uovkevrjesupnfbfnifr.supabase.co';
+const supabaseKey = 'sb_publishable_TX2em9fdj2V2o_-hl95ftw_fPPY7ErR';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
 const Storage = {
-    key: 'saas_operacoes_db',
-    defaultData: {
-        usuarios: [],
-        sessaoLogada: null,
-        bases: {
-            pais: [{ id: 1, nome: '🇧🇷 Brasil' }, { id: 2, nome: '🇵🇪 Peru' }, { id: 3, nome: '🇨🇴 Colômbia' }],
-            oferta: [{ id: 1, nome: 'Oferta Padrão' }],
-            bm: [{ id: 1, nome: 'BM Principal' }],
-            pagina: [{ id: 1, nome: 'Página Matriz' }]
-        },
-        aparelhos: [],
-        historico: []
-    },
-    load() {
-        const data = localStorage.getItem(this.key);
-        if (!data) { 
-            this.save(this.defaultData); 
-            return JSON.parse(JSON.stringify(this.defaultData)); 
-        }
+    async loadFromCloud() {
+        console.log("☁️ Baixando dados do Supabase...");
         
-        const parsedData = JSON.parse(data);
+        // Faz o download de todas as tabelas ao mesmo tempo
+        const [resAp, resPaises, resBms, resPaginas, resOfertas, resHist] = await Promise.all([
+            supabase.from('aparelhos').select('*'),
+            supabase.from('paises').select('*'),
+            supabase.from('bms').select('*'),
+            supabase.from('paginas').select('*'),
+            supabase.from('ofertas').select('*'),
+            supabase.from('historico').select('*').order('id', { ascending: false }).limit(200)
+        ]);
 
-        // AUTO-MIGRAÇÃO: Se for o banco de dados antigo, injeta as tabelas novas
-        if (!parsedData.usuarios) parsedData.usuarios = [];
-        if (parsedData.sessaoLogada === undefined) parsedData.sessaoLogada = null;
-        if (!parsedData.bases) parsedData.bases = this.defaultData.bases;
-        if (!parsedData.bases.pais) parsedData.bases.pais = this.defaultData.bases.pais;
+        // Mantemos os usuários no navegador temporariamente para não te deslogar
+        const authLocal = JSON.parse(localStorage.getItem('saas_auth')) || { usuarios: [], sessaoLogada: null };
 
-        return parsedData;
+        // Monta o banco de dados na memória do computador para ser rápido
+        window.db = {
+            usuarios: authLocal.usuarios,
+            sessaoLogada: authLocal.sessaoLogada,
+            bases: {
+                pais: resPaises.data || [],
+                bm: resBms.data || [],
+                pagina: resPaginas.data || [],
+                oferta: resOfertas.data || []
+            },
+            aparelhos: resAp.data || [],
+            historico: resHist.data || []
+        };
+
+        // Formata as tags corretamente
+        window.db.aparelhos.forEach(ap => {
+            if (typeof ap.tags === 'string') ap.tags = ap.tags.split(',').filter(t => t.trim() !== '');
+        });
+
+        return window.db;
     },
-    save(data) { localStorage.setItem(this.key, JSON.stringify(data)); }
-};
 
-window.db = Storage.load();
+    saveLocalAuth() {
+        localStorage.setItem('saas_auth', JSON.stringify({
+            usuarios: window.db.usuarios,
+            sessaoLogada: window.db.sessaoLogada
+        }));
+    }
+};
