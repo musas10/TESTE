@@ -1,6 +1,9 @@
 const Aparelhos = {
     async salvar(event) {
         event.preventDefault();
+        
+        if (!window.mySupabase) return alert("Erro: Sem conexão com o servidor.");
+
         const id = document.getElementById('campo-id').value.trim();
         const tagsRaw = document.getElementById('campo-tags').value;
         
@@ -22,37 +25,45 @@ const Aparelhos = {
         
         if (existe && (!isEdicao || existe.id !== window.idAparelhoEmEdicao)) return alert(`Erro: O ID "${id}" já está cadastrado!`);
 
-        // Feedback visual de carregamento
+        // Feedback visual
         const btn = document.querySelector('#form-cadastro button[type="submit"]');
         btn.innerText = "Salvando na Nuvem...";
         btn.disabled = true;
 
-        if (isEdicao) {
-            const aparelhoAntigo = window.db.aparelhos.find(a => a.id === window.idAparelhoEmEdicao);
-            dados.data_criacao = aparelhoAntigo.data_criacao || dados.ultima_alteracao;
-            
-            if (id !== window.idAparelhoEmEdicao) {
-                await supabase.from('aparelhos').delete().eq('id', window.idAparelhoEmEdicao);
+        try {
+            if (isEdicao) {
+                const aparelhoAntigo = window.db.aparelhos.find(a => a.id === window.idAparelhoEmEdicao);
+                dados.data_criacao = aparelhoAntigo.data_criacao || dados.ultima_alteracao;
+                
+                if (id !== window.idAparelhoEmEdicao) {
+                    await window.mySupabase.from('aparelhos').delete().eq('id', window.idAparelhoEmEdicao);
+                }
+                await window.mySupabase.from('aparelhos').upsert(dados);
+                try { Historico.registrar('Edição', id, `Status atualizado para ${dados.status}`); } catch(e){}
+            } else {
+                dados.data_criacao = dados.ultima_alteracao;
+                await window.mySupabase.from('aparelhos').insert([dados]);
+                try { Historico.registrar('Criação', id, `Cadastrado na BM ${dados.bm}`); } catch(e){}
             }
-            await supabase.from('aparelhos').upsert(dados);
-            Historico.registrar('Edição', id, `Status atualizado para ${dados.status}`);
-        } else {
-            dados.data_criacao = dados.ultima_alteracao;
-            await supabase.from('aparelhos').insert([dados]);
-            Historico.registrar('Criação', id, `Cadastrado na BM ${dados.bm}`);
-        }
 
-        await Storage.loadFromCloud();
-        Modais.fechar('modal-ativo');
-        App.atualizarTudo();
-        
-        btn.innerText = "Salvar Aparelho";
-        btn.disabled = false;
+            await Storage.loadFromCloud();
+            Modais.fechar('modal-ativo');
+            App.atualizarTudo();
+            
+        } catch (erro) {
+            console.error("Erro ao salvar aparelho:", erro);
+            alert("Falha ao salvar no banco de dados.");
+        } finally {
+            btn.innerText = "Salvar Aparelho";
+            btn.disabled = false;
+        }
     },
     async excluir(id) {
+        if (!window.mySupabase) return alert("Erro: Sem conexão com o servidor.");
+
         if(confirm(`Atenção: Excluir permanentemente o aparelho ${id}?`)) {
-            await supabase.from('aparelhos').delete().eq('id', id);
-            Historico.registrar('Exclusão', id, 'Aparelho removido do banco.');
+            await window.mySupabase.from('aparelhos').delete().eq('id', id);
+            try { Historico.registrar('Exclusão', id, 'Aparelho removido do banco.'); } catch(e){}
             await Storage.loadFromCloud();
             App.atualizarTudo();
         }
