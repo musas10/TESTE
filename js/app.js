@@ -1,5 +1,5 @@
 const App = {
-    init() {
+    async init() {
         document.getElementById('form-cadastro').addEventListener('submit', Aparelhos.salvar);
         document.getElementById('form-gerenciador').addEventListener('submit', Render.salvarItemBase.bind(Render));
 
@@ -11,6 +11,9 @@ const App = {
                 else el.addEventListener('change', Filtros.aplicar);
             }
         });
+
+        // Espera conectar no servidor antes de verificar a sessão
+        await Storage.loadFromCloud();
 
         if(Auth.verificarSessao()) { this.iniciarSistema(); }
     },
