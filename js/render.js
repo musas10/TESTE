@@ -1,4 +1,5 @@
 window.visualizacaoAtual = 'cards';
+const tabelaMap = { 'pais': 'paises', 'bm': 'bms', 'pagina': 'paginas', 'oferta': 'ofertas' };
 
 const Render = {
     mudarView(tipo) {
@@ -62,30 +63,48 @@ const Render = {
             });
         }
     },
-    salvarItemBase(event) {
+    async salvarItemBase(event) {
         event.preventDefault();
         const input = document.getElementById('campo-novo-item');
         if(input.value.trim() !== '') {
-            window.db.bases[window.tipoGerenciadorAtual].push({ id: Date.now(), nome: input.value });
-            input.value = ''; Storage.save(window.db);
-            this.renderizarListaGerenciador(); Filtros.popularDropdownsAparelho();
+            const tabela = tabelaMap[window.tipoGerenciadorAtual];
+            await supabase.from(tabela).insert([{ nome: input.value }]);
+            input.value = '';
+            await Storage.loadFromCloud();
+            this.renderizarListaGerenciador();
+            Filtros.popularDropdownsAparelho();
         }
     },
-    editarItemBase(id) {
+    async editarItemBase(id) {
         const novoNome = document.getElementById(`input-item-${id}`).value;
-        const index = window.db.bases[window.tipoGerenciadorAtual].findIndex(i => i.id === id);
-        if(index !== -1 && novoNome.trim() !== '') {
-            const nomeAntigo = window.db.bases[window.tipoGerenciadorAtual][index].nome;
-            window.db.aparelhos.forEach(ap => { if(ap[window.tipoGerenciadorAtual] === nomeAntigo) ap[window.tipoGerenciadorAtual] = novoNome; });
-            window.db.bases[window.tipoGerenciadorAtual][index].nome = novoNome;
-            Storage.save(window.db);
-            alert('Atualizado com sucesso!'); Filtros.popularDropdownsAparelho(); App.atualizarTudo();
+        if(novoNome.trim() !== '') {
+            const tabela = tabelaMap[window.tipoGerenciadorAtual];
+            const nomeAntigo = window.db.bases[window.tipoGerenciadorAtual].find(i => i.id === id).nome;
+            
+            await supabase.from(tabela).update({ nome: novoNome }).eq('id', id);
+            
+            // Atualiza em massa os aparelhos que usavam esse nome
+            for (let ap of window.db.aparelhos) {
+                if (ap[window.tipoGerenciadorAtual] === nomeAntigo) {
+                    const updateObj = {};
+                    updateObj[window.tipoGerenciadorAtual] = novoNome;
+                    await supabase.from('aparelhos').update(updateObj).eq('id', ap.id);
+                }
+            }
+
+            alert('Atualizado com sucesso!');
+            await Storage.loadFromCloud();
+            Filtros.popularDropdownsAparelho();
+            App.atualizarTudo();
         }
     },
-    excluirItemBase(id) {
+    async excluirItemBase(id) {
         if(confirm('Apagar este registro afetará os aparelhos vinculados. Continuar?')) {
-            window.db.bases[window.tipoGerenciadorAtual] = window.db.bases[window.tipoGerenciadorAtual].filter(i => i.id !== id);
-            Storage.save(window.db); this.renderizarListaGerenciador(); Filtros.popularDropdownsAparelho();
+            const tabela = tabelaMap[window.tipoGerenciadorAtual];
+            await supabase.from(tabela).delete().eq('id', id);
+            await Storage.loadFromCloud();
+            this.renderizarListaGerenciador();
+            Filtros.popularDropdownsAparelho();
         }
     },
     renderizarListaGerenciador() {
