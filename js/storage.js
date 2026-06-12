@@ -3,9 +3,10 @@ if (!window.supabase) {
     console.error("❌ ERRO CRÍTICO: O Supabase não foi carregado pelo HTML.");
 }
 
-const supabaseUrl = 'https://uovkevrjesupnfbfnifr.supabase.co';
-const supabaseKey = 'sb_publishable_TX2em9fdj2V2o_-hl95ftw_fPPY7ErR';
-const supabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+// Usando 'var' para evitar erros de cache/dupla leitura no navegador
+var supabaseUrl = 'https://uovkevrjesupnfbfnifr.supabase.co';
+var supabaseKey = 'sb_publishable_TX2em9fdj2V2o_-hl95ftw_fPPY7ErR';
+var mySupabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
 
 const Storage = {
     async loadFromCloud() {
@@ -27,16 +28,16 @@ const Storage = {
             historico: []
         };
 
-        if (!supabase) return window.db; 
+        if (!mySupabase) return window.db; 
 
         try {
             const [resAp, resPaises, resBms, resPaginas, resOfertas, resHist] = await Promise.all([
-                supabase.from('aparelhos').select('*'),
-                supabase.from('paises').select('*'),
-                supabase.from('bms').select('*'),
-                supabase.from('paginas').select('*'),
-                supabase.from('ofertas').select('*'),
-                supabase.from('historico').select('*').order('id', { ascending: false }).limit(200)
+                mySupabase.from('aparelhos').select('*'),
+                mySupabase.from('paises').select('*'),
+                mySupabase.from('bms').select('*'),
+                mySupabase.from('paginas').select('*'),
+                mySupabase.from('ofertas').select('*'),
+                mySupabase.from('historico').select('*').order('id', { ascending: false }).limit(200)
             ]);
 
             window.db.bases.pais = resPaises?.data || [];
