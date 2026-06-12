@@ -11,7 +11,6 @@ const Storage = {
     async loadFromCloud() {
         console.log("☁️ Conectando ao Supabase...");
         
-        // 1. Tenta recuperar os logins salvos no navegador de forma segura
         let authLocal = { usuarios: [], sessaoLogada: null };
         try {
             const salvo = localStorage.getItem('saas_auth');
@@ -20,7 +19,6 @@ const Storage = {
             console.warn("Aviso: Erro ao ler login local", e);
         }
 
-        // 2. Garante que a estrutura do sistema exista SEMPRE (mesmo sem internet)
         window.db = {
             usuarios: authLocal.usuarios || [],
             sessaoLogada: authLocal.sessaoLogada || null,
@@ -29,9 +27,8 @@ const Storage = {
             historico: []
         };
 
-        if (!supabase) return window.db; // Aborta se o supabase falhou
+        if (!supabase) return window.db; 
 
-        // 3. Tenta baixar os dados da nuvem com proteção de erro
         try {
             const [resAp, resPaises, resBms, resPaginas, resOfertas, resHist] = await Promise.all([
                 supabase.from('aparelhos').select('*'),
@@ -49,7 +46,6 @@ const Storage = {
             window.db.aparelhos = resAp?.data || [];
             window.db.historico = resHist?.data || [];
 
-            // Formata as tags
             window.db.aparelhos.forEach(ap => {
                 if (typeof ap.tags === 'string') ap.tags = ap.tags.split(',').filter(t => t.trim() !== '');
             });
