@@ -29,11 +29,9 @@ const Modais = {
         }
         this.abrir('modal-ativo');
     },
-
     abrirDetalhes(id) {
         const ap = window.db.aparelhos.find(a => a.id === id);
         const container = document.getElementById('conteudo-detalhes');
-        
         let tagsHTML = (ap.tags && ap.tags.length > 0) ? ap.tags.map(t => `<span class="tag-chip">${t}</span>`).join('') : 'Nenhuma tag';
         
         container.innerHTML = `
@@ -49,20 +47,10 @@ const Modais = {
             <hr style="border-color:#334155; margin:15px 0;">
             <div style="font-size: 0.8rem; color:#64748b; text-align:right;">Criado em: ${ap.dataCriacao || 'N/A'}<br>Última alteração: ${ap.ultimaAlteracao || 'N/A'}</div>
         `;
-        
-        document.getElementById('btn-editar-detalhe').onclick = () => {
-            this.fechar('modal-detalhes');
-            this.abrirModalAtivo(id);
-        };
-        
+        document.getElementById('btn-editar-detalhe').onclick = () => { this.fechar('modal-detalhes'); this.abrirModalAtivo(id); };
         this.abrir('modal-detalhes');
     },
-
-    abrirHistorico() {
-        Historico.renderizar();
-        this.abrir('modal-historico');
-    },
-
+    abrirHistorico() { Historico.renderizar(); this.abrir('modal-historico'); },
     abrirGerenciador(tipo, titulo) {
         window.tipoGerenciadorAtual = tipo;
         document.getElementById('titulo-gerenciador').innerText = `Gerenciar ${titulo}`;
