@@ -3,16 +3,17 @@ if (!window.supabase) {
     console.error("❌ ERRO CRÍTICO: O Supabase não foi carregado pelo HTML.");
 }
 
-// Usando 'var' para evitar erros de cache/dupla leitura no navegador
-var supabaseUrl = 'https://uovkevrjesupnfbfnifr.supabase.co';
-var supabaseKey = 'sb_publishable_TX2em9fdj2V2o_-hl95ftw_fPPY7ErR';
-var mySupabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+// Transformando mySupabase em global para todos os arquivos acessarem
+window.mySupabase = window.supabase ? window.supabase.createClient(
+    'https://uovkevrjesupnfbfnifr.supabase.co', 
+    'sb_publishable_TX2em9fdj2V2o_-hl95ftw_fPPY7ErR'
+) : null;
 
 const Storage = {
     async loadFromCloud() {
         console.log("☁️ Conectando ao Supabase...");
         
-        let authLocal = { usuarios: [], sessaoLogada: null };
+        let authLocal = { sessaoLogada: null };
         try {
             const salvo = localStorage.getItem('saas_auth');
             if (salvo) authLocal = JSON.parse(salvo);
@@ -21,23 +22,25 @@ const Storage = {
         }
 
         window.db = {
-            usuarios: authLocal.usuarios || [],
+            usuarios: [],
             sessaoLogada: authLocal.sessaoLogada || null,
             bases: { pais: [], bm: [], pagina: [], oferta: [] },
             aparelhos: [],
             historico: []
         };
 
-        if (!mySupabase) return window.db; 
+        if (!window.mySupabase) return window.db; 
 
         try {
-            const [resAp, resPaises, resBms, resPaginas, resOfertas, resHist] = await Promise.all([
-                mySupabase.from('aparelhos').select('*'),
-                mySupabase.from('paises').select('*'),
-                mySupabase.from('bms').select('*'),
-                mySupabase.from('paginas').select('*'),
-                mySupabase.from('ofertas').select('*'),
-                mySupabase.from('historico').select('*').order('id', { ascending: false }).limit(200)
+            // Agora baixamos a tabela de usuários (resUsers) junto com o resto!
+            const [resAp, resPaises, resBms, resPaginas, resOfertas, resHist, resUsers] = await Promise.all([
+                window.mySupabase.from('aparelhos').select('*'),
+                window.mySupabase.from('paises').select('*'),
+                window.mySupabase.from('bms').select('*'),
+                window.mySupabase.from('paginas').select('*'),
+                window.mySupabase.from('ofertas').select('*'),
+                window.mySupabase.from('historico').select('*').order('id', { ascending: false }).limit(200),
+                window.mySupabase.from('usuarios').select('*')
             ]);
 
             window.db.bases.pais = resPaises?.data || [];
@@ -46,23 +49,23 @@ const Storage = {
             window.db.bases.oferta = resOfertas?.data || [];
             window.db.aparelhos = resAp?.data || [];
             window.db.historico = resHist?.data || [];
+            window.db.usuarios = resUsers?.data || []; // Usuários da nuvem!
 
             window.db.aparelhos.forEach(ap => {
                 if (typeof ap.tags === 'string') ap.tags = ap.tags.split(',').filter(t => t.trim() !== '');
             });
 
-            console.log("✅ Conexão com Supabase Perfeita! Dados carregados.");
         } catch (erro) {
             console.error("❌ Erro ao baixar dados do Supabase:", erro);
-            alert("Aviso: Falha ao conectar com a nuvem. O painel pode não carregar os dados corretamente.");
+            alert("Aviso: Falha ao conectar com a nuvem.");
         }
 
         return window.db;
     },
 
     saveLocalAuth() {
+        // Agora o navegador salva apenas QUEM está logado no momento, e não a base inteira de usuários
         localStorage.setItem('saas_auth', JSON.stringify({
-            usuarios: window.db.usuarios,
             sessaoLogada: window.db.sessaoLogada
         }));
     }
