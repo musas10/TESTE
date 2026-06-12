@@ -1,9 +1,13 @@
 const Historico = {
-    registrar(acao, aparelhoId, detalhes = '') {
-        const log = { id: Date.now(), data: new Date().toLocaleString('pt-BR'), acao: acao, aparelho: aparelhoId, detalhes: detalhes };
-        window.db.historico.unshift(log);
+    async registrar(acao, aparelhoId, detalhes = '') {
+        const dataAtual = new Date().toLocaleString('pt-BR');
+        
+        // Salva na Nuvem
+        await supabase.from('historico').insert([{ acao: acao, aparelho: aparelhoId, detalhes: detalhes, data: dataAtual }]);
+        
+        // Atualiza a tela em tempo real
+        window.db.historico.unshift({ id: Date.now(), data: dataAtual, acao: acao, aparelho: aparelhoId, detalhes: detalhes });
         if(window.db.historico.length > 200) window.db.historico.pop();
-        Storage.save(window.db);
     },
     renderizar() {
         const container = document.getElementById('lista-logs');
