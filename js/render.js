@@ -65,10 +65,13 @@ const Render = {
     },
     async salvarItemBase(event) {
         event.preventDefault();
+        
+        if (!window.mySupabase) return alert("Erro: Sem conexão com o servidor.");
+
         const input = document.getElementById('campo-novo-item');
         if(input.value.trim() !== '') {
             const tabela = tabelaMap[window.tipoGerenciadorAtual];
-            await supabase.from(tabela).insert([{ nome: input.value }]);
+            await window.mySupabase.from(tabela).insert([{ nome: input.value }]);
             input.value = '';
             await Storage.loadFromCloud();
             this.renderizarListaGerenciador();
@@ -81,14 +84,14 @@ const Render = {
             const tabela = tabelaMap[window.tipoGerenciadorAtual];
             const nomeAntigo = window.db.bases[window.tipoGerenciadorAtual].find(i => i.id === id).nome;
             
-            await supabase.from(tabela).update({ nome: novoNome }).eq('id', id);
+            await window.mySupabase.from(tabela).update({ nome: novoNome }).eq('id', id);
             
             // Atualiza em massa os aparelhos que usavam esse nome
             for (let ap of window.db.aparelhos) {
                 if (ap[window.tipoGerenciadorAtual] === nomeAntigo) {
                     const updateObj = {};
                     updateObj[window.tipoGerenciadorAtual] = novoNome;
-                    await supabase.from('aparelhos').update(updateObj).eq('id', ap.id);
+                    await window.mySupabase.from('aparelhos').update(updateObj).eq('id', ap.id);
                 }
             }
 
@@ -101,7 +104,7 @@ const Render = {
     async excluirItemBase(id) {
         if(confirm('Apagar este registro afetará os aparelhos vinculados. Continuar?')) {
             const tabela = tabelaMap[window.tipoGerenciadorAtual];
-            await supabase.from(tabela).delete().eq('id', id);
+            await window.mySupabase.from(tabela).delete().eq('id', id);
             await Storage.loadFromCloud();
             this.renderizarListaGerenciador();
             Filtros.popularDropdownsAparelho();
