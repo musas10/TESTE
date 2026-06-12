@@ -1,7 +1,6 @@
 const Aparelhos = {
     salvar(event) {
         event.preventDefault();
-        
         const id = document.getElementById('campo-id').value.trim();
         const tagsRaw = document.getElementById('campo-tags').value;
         
@@ -19,19 +18,13 @@ const Aparelhos = {
         };
 
         const isEdicao = window.idAparelhoEmEdicao !== null;
-        
-        // Validação de Duplicidade
         const existe = window.db.aparelhos.find(a => a.id.toLowerCase() === id.toLowerCase());
-        if (existe && (!isEdicao || existe.id !== window.idAparelhoEmEdicao)) {
-            alert(`Erro: O ID "${id}" já está cadastrado em outro aparelho!`);
-            return;
-        }
+        
+        if (existe && (!isEdicao || existe.id !== window.idAparelhoEmEdicao)) return alert(`Erro: O ID "${id}" já está cadastrado!`);
 
         if (isEdicao) {
             const index = window.db.aparelhos.findIndex(ap => ap.id === window.idAparelhoEmEdicao);
-            if(!window.db.aparelhos[index].dataCriacao) dados.dataCriacao = dados.ultimaAlteracao; // Preserva se houver
-            else dados.dataCriacao = window.db.aparelhos[index].dataCriacao;
-            
+            dados.dataCriacao = window.db.aparelhos[index].dataCriacao || dados.ultimaAlteracao;
             window.db.aparelhos[index] = dados;
             Historico.registrar('Edição', id, `Status: ${dados.status} | Oferta: ${dados.oferta}`);
         } else {
@@ -44,7 +37,6 @@ const Aparelhos = {
         Modais.fechar('modal-ativo');
         App.atualizarTudo();
     },
-
     excluir(id) {
         if(confirm(`Atenção: Excluir permanentemente o aparelho ${id}?`)) {
             window.db.aparelhos = window.db.aparelhos.filter(ap => ap.id !== id);
