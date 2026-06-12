@@ -1,24 +1,14 @@
 const Historico = {
     registrar(acao, aparelhoId, detalhes = '') {
-        const log = {
-            id: Date.now(),
-            data: new Date().toLocaleString('pt-BR'),
-            acao: acao,
-            aparelho: aparelhoId,
-            detalhes: detalhes
-        };
-        window.db.historico.unshift(log); // Adiciona no início
-        if(window.db.historico.length > 200) window.db.historico.pop(); // Limita a 200 logs
+        const log = { id: Date.now(), data: new Date().toLocaleString('pt-BR'), acao: acao, aparelho: aparelhoId, detalhes: detalhes };
+        window.db.historico.unshift(log);
+        if(window.db.historico.length > 200) window.db.historico.pop();
         Storage.save(window.db);
     },
-
     renderizar() {
         const container = document.getElementById('lista-logs');
         container.innerHTML = '';
-        if(window.db.historico.length === 0) {
-            container.innerHTML = '<p style="color:#64748b;">Nenhum registro encontrado.</p>';
-            return;
-        }
+        if(window.db.historico.length === 0) return container.innerHTML = '<p style="color:#64748b;">Nenhum registro encontrado.</p>';
         window.db.historico.forEach(log => {
             container.innerHTML += `
                 <div class="log-item">
