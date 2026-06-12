@@ -28,7 +28,7 @@ const Auth = {
         
         if (user) {
             window.db.sessaoLogada = { nome: user.nome, email: user.email };
-            Storage.save(window.db);
+            Storage.saveLocalAuth();
             Historico.registrar('Login', 'Sistema', `Usuário ${user.nome} acessou o sistema.`);
             App.iniciarSistema();
             this.verificarSessao();
@@ -43,22 +43,14 @@ const Auth = {
 
         if (window.db.usuarios.find(u => u.email === email)) return alert('Este e-mail já está cadastrado!');
         
-        // Cadastra o usuário
         window.db.usuarios.push({ id: Date.now(), nome, email, senha });
-        
-        // Loga automaticamente após cadastrar
         window.db.sessaoLogada = { nome, email };
-        Storage.save(window.db);
+        Storage.saveLocalAuth();
         
         Historico.registrar('Novo Operador', 'Sistema', `Usuário ${nome} foi cadastrado.`);
         
-        alert('Conta criada com sucesso! Bem-vindo(a) ao painel.');
-        
-        // Limpa os campos de registro e inicia a tela
-        document.getElementById('reg-nome').value = '';
-        document.getElementById('reg-email').value = '';
-        document.getElementById('reg-senha').value = '';
-        
+        alert('Conta criada com sucesso!');
+        document.getElementById('form-register').reset();
         App.iniciarSistema();
         this.verificarSessao();
     },
@@ -66,7 +58,7 @@ const Auth = {
         if(confirm('Tem certeza que deseja sair?')) {
             Historico.registrar('Logout', 'Sistema', `Usuário ${window.db.sessaoLogada.nome} saiu.`);
             window.db.sessaoLogada = null;
-            Storage.save(window.db);
+            Storage.saveLocalAuth();
             this.verificarSessao();
         }
     }
