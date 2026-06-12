@@ -43,10 +43,24 @@ const Auth = {
 
         if (window.db.usuarios.find(u => u.email === email)) return alert('Este e-mail já está cadastrado!');
         
+        // Cadastra o usuário
         window.db.usuarios.push({ id: Date.now(), nome, email, senha });
+        
+        // Loga automaticamente após cadastrar
+        window.db.sessaoLogada = { nome, email };
         Storage.save(window.db);
-        alert('Usuário cadastrado com sucesso! Faça login para continuar.');
-        this.toggleForm();
+        
+        Historico.registrar('Novo Operador', 'Sistema', `Usuário ${nome} foi cadastrado.`);
+        
+        alert('Conta criada com sucesso! Bem-vindo(a) ao painel.');
+        
+        // Limpa os campos de registro e inicia a tela
+        document.getElementById('reg-nome').value = '';
+        document.getElementById('reg-email').value = '';
+        document.getElementById('reg-senha').value = '';
+        
+        App.iniciarSistema();
+        this.verificarSessao();
     },
     logout() {
         if(confirm('Tem certeza que deseja sair?')) {
