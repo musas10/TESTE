@@ -42,35 +42,48 @@ const Auth = {
             alert('Credenciais inválidas. Tente novamente.'); 
         }
     },
-    registrar(event) {
+    async registrar(event) {
         event.preventDefault();
         
-        // Garante que a estrutura exista antes de salvar
-        if (!window.db) window.db = { usuarios: [] };
-        if (!window.db.usuarios) window.db.usuarios = [];
+        if (!window.mySupabase) return alert("Erro de conexão com o servidor.");
 
         const nome = document.getElementById('reg-nome').value.trim();
         const email = document.getElementById('reg-email').value.trim();
         const senha = document.getElementById('reg-senha').value;
 
+        // Verifica se já existe na memória carregada da nuvem
         if (window.db.usuarios.find(u => u.email === email)) {
             return alert('Este e-mail já está cadastrado!');
         }
+
+        // Feedback visual
+        const btn = document.querySelector('#form-register button[type="submit"]');
+        btn.innerText = "Criando conta na nuvem...";
+        btn.disabled = true;
         
-        // 1. Cadastra o novo usuário
-        window.db.usuarios.push({ id: Date.now(), nome, email, senha });
+        // 1. Cadastra o novo usuário diretamente na NUVEM
+        const { error } = await window.mySupabase.from('usuarios').insert([{ nome, email, senha }]);
         
-        // 2. Faz o login automático
+        if (error) {
+            btn.innerText = "Criar Conta";
+            btn.disabled = false;
+            console.error(error);
+            return alert('Erro ao criar conta no servidor.');
+        }
+
+        // 2. Atualiza a memória local e faz login automático
+        window.db.usuarios.push({ nome, email, senha });
         window.db.sessaoLogada = { nome, email };
         Storage.saveLocalAuth();
         
-        // 3. Tenta salvar o log no histórico
         try { Historico.registrar('Novo Operador', 'Sistema', `Usuário ${nome} foi cadastrado.`); } catch(e){}
         
-        alert('Conta criada com sucesso!');
+        alert('Conta criada com sucesso! Bem-vindo(a).');
         
-        // 4. Limpa a tela e entra no sistema
         document.getElementById('form-register').reset();
+        btn.innerText = "Criar Conta";
+        btn.disabled = false;
+
         App.iniciarSistema();
         this.verificarSessao();
     },
